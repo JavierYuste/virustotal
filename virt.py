@@ -117,6 +117,9 @@ class VirusTotal(object):
                             os.path.basename(filename), res.status_code, resmap["response_code"], resmap["scan_date"], resmap["positives"], resmap["total"])
                 else:
                     self.logger.info("retrieve report: %s, HTTP: %d, content: %s", os.path.basename(filename), res.status_code, res.text)
+
+                json_dump.save_prediction(filename, resmap["positives"], resmap["total"], resmap["scan_date"])
+                
             else:
                 self.logger.warning("retrieve report: %s, HTTP: %d", os.path.basename(filename), res.status_code)
 
@@ -158,7 +161,22 @@ class VirusTotal(object):
         self.has_sent_retrieve_req = True
         return res
 
+class report_json_class():
+    def __init__(self, file):
+        self.file = file
+        self.data = {}
 
+    def save_prediction(self, sample, positives, total, scan_date):
+        prediction = {}
+        prediction['positives'] = positives
+        prediction['total'] = total
+        prediction['scan_date'] = scan_date
+        self.data[os.path.basename(sample)] = prediction
+
+    def dump_to_file(self):
+        with open(self.file, 'w') as f:
+            json.dump(self.data, f)
+        logging.debug("Dumped info to file " + str(self.file))
 
 if __name__ == "__main__":
     vt = VirusTotal()
@@ -176,6 +194,7 @@ if __name__ == "__main__":
     parser.add_argument("-r", "--retrieve", help="retrieve reports on a file or a directory of files", metavar="PATH")
     parser.add_argument("-m", "--retrievefrommeta", help="retrieve reports based on checksums in a metafile (one sha256 checksum for each line)", metavar="METAFILE")
     parser.add_argument("-l", "--log", help="log actions and responses in file", metavar="LOGFILE")
+    parser.add_argument("-o", "--output", help="json output file", metavar="FILE")
     args = parser.parse_args()
 
     if args.log:
@@ -192,6 +211,8 @@ if __name__ == "__main__":
     # system init end, start to perform operations
     api_comments = {True: 'Public', False: 'Private'}
     vt.logger.info("API KEY loaded. %s API used.", api_comments[vt.is_public_api])
+    global json_dump
+    json_dump = report_json_class(args.output)
 
     if args.send:
         vt.send_files(list_all_files(args.send))
@@ -201,3 +222,5 @@ if __name__ == "__main__":
 
     if args.retrievefrommeta:
         vt.retrieve_from_meta(args.retrievefrommeta)
+
+    json_dump.dump_to_file()
