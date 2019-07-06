@@ -119,7 +119,7 @@ class VirusTotal(object):
                     self.logger.info("retrieve report: %s, HTTP: %d, content: %s", os.path.basename(filename), res.status_code, res.text)
 
                 json_dump.save_prediction(filename, resmap["positives"], resmap["total"], resmap["scan_date"])
-                
+
             else:
                 self.logger.warning("retrieve report: %s, HTTP: %d", os.path.basename(filename), res.status_code)
 
