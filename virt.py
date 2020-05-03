@@ -113,8 +113,15 @@ class VirusTotal(object):
             if res.status_code == self.HTTP_OK:
                 resmap = json.loads(res.text)
                 if not self.is_verboselog:
-                    self.logger.info("retrieve report: %s, HTTP: %d, response_code: %d, scan_date: %s, positives/total: %d/%d",
-                            os.path.basename(filename), res.status_code, resmap["response_code"], resmap["scan_date"], resmap["positives"], resmap["total"])
+                    try:
+                        self.logger.info("retrieve report: %s, HTTP: %d, response_code: %d, scan_date: %s, positives/total: %d/%d",
+                                os.path.basename(filename), res.status_code, resmap["response_code"], resmap["scan_date"], resmap["positives"], resmap["total"])
+                    except:
+                        resmap = dict()
+                        resmap["positives"] = 'null'
+                        resmap["total"] = 'null'
+                        resmap["scan_date"] = 'null'
+                        self.logger.info("Error with file %s", os.path.basename(filename))
                 else:
                     self.logger.info("retrieve report: %s, HTTP: %d, content: %s", os.path.basename(filename), res.status_code, res.text)
 
@@ -141,6 +148,9 @@ class VirusTotal(object):
                                 checksum, res.status_code, resmap["response_code"], resmap["scan_date"], resmap["positives"], resmap["total"])
                     else:
                         self.logger.info("retrieve report: %s, HTTP: %d, content: %s", os.path.basename(filename), res.status_code, res.text)
+
+                    json_dump.save_prediction(checksum, resmap["positives"], resmap["total"], resmap["scan_date"])
+
                 else:
                     self.logger.warning("retrieve report: %s, HTTP: %d", checksum, res.status_code)
 
@@ -172,6 +182,7 @@ class report_json_class():
         prediction['total'] = total
         prediction['scan_date'] = scan_date
         self.data[os.path.basename(sample)] = prediction
+        self.dump_to_file()
 
     def dump_to_file(self):
         with open(self.file, 'w') as f:
